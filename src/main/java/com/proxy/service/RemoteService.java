@@ -12,28 +12,33 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.HandlerMapping;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Enumeration;
 
 @Service
 public class RemoteService {
-    public static final String USER_AGENT = "User-Agent";
-
     @Autowired
     private HttpServletRequest request;
 
     private RestTemplate restTemplate = new RestTemplate();
 
-    public ResponseEntity invokeGet(String header) {
-        HttpHeaders httpHeaders =  new HttpHeaders();
-        httpHeaders.set(USER_AGENT, header);
-        HttpEntity<String> request = new HttpEntity<>(httpHeaders);
-        return restTemplate.exchange(getURI(), HttpMethod.GET, request, String.class);
+    public ResponseEntity invokeGet() {
+        return restTemplate.exchange(getURI(), HttpMethod.GET, new HttpEntity<>(getHeader()), String.class);
     }
 
-    public ResponseEntity invokePost(String header, String body) {
-        HttpHeaders httpHeaders =  new HttpHeaders();
-        httpHeaders.set(USER_AGENT, header);
-        HttpEntity<String> request = new HttpEntity<>(body, httpHeaders);
-        return restTemplate.exchange(getURI(), HttpMethod.POST, request, String.class);
+    public ResponseEntity invokePost(String body) {
+        return restTemplate.exchange(getURI(), HttpMethod.POST, new HttpEntity<>(body, getHeader()), String.class);
+    }
+
+    private HttpHeaders getHeader() {
+        HttpHeaders httpHeaders = new HttpHeaders();
+        Enumeration<String> headerNames = request.getHeaderNames();
+        if (headerNames != null) {
+            while (headerNames.hasMoreElements()) {
+                String header = headerNames.nextElement();
+                httpHeaders.set(header, request.getHeader(header));
+            }
+        }
+        return httpHeaders;
     }
 
     private String getURI() {
@@ -42,6 +47,6 @@ public class RemoteService {
         String bestMatchPattern = (String) request.getAttribute(
                 HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
         AntPathMatcher apm = new AntPathMatcher();
-        return StringUtils.replace(apm.extractPathWithinPattern(bestMatchPattern, path),":/","://");
+        return StringUtils.replace(apm.extractPathWithinPattern(bestMatchPattern, path), ":/", "://");
     }
 }
